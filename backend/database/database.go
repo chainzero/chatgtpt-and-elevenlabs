@@ -1,0 +1,76 @@
+package database
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"math/rand"
+	"os"
+	"time"
+)
+
+type Message struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+type MessageList struct {
+	Messages []Message
+}
+
+const (
+	filename = "./database/stored_data.json"
+)
+
+// Current logic uses a local JSON file to store messages within and to act as the database.
+// Could eventually be updated to use a true DB message storal
+func ReadDatabaseAndAppendInstruction() MessageList {
+
+	//Define initial system learn instruction which should always be the message in the MessageList
+	learnInstruction := Message{
+		Role:    "system",
+		Content: "You are interviewing the user for a job as a retail assistant.  Initially respond with greetings for the interview session.  Your name is Rachel.  The user is called Scott.",
+	}
+
+	// Create a random number between 0 and 1 that will be used to determine if ChatGPT resppnse includes some humor
+	// Intent is have variation in response and not always same text
+	rand.Seed(time.Now().UnixNano()) // Seed the random number generator with the current time
+	randomFloat := rand.Float64()    // Generate a random floating-point number between 0 and 1
+	fmt.Println(randomFloat)         // Print the random number
+
+	// Prompt engineering using random element
+	if randomFloat < 0.5 {
+		learnInstruction.Content = learnInstruction.Content + " Your response will have some light humour. "
+	}
+
+	// Append message to message list
+	messageList := MessageList{}
+	messageList.Messages = append(messageList.Messages, learnInstruction)
+
+	return messageList
+
+}
+
+func StoreMessagesInDB(messageList MessageList) {
+	fmt.Println("Message list in StoreMessagesInDB: ")
+	fmt.Printf("%+v\n", messageList)
+	// Encode the struct as JSON
+	newMessagesJSON, err := json.Marshal(messageList)
+	if err != nil {
+		log.Fatalf("failed to marshal JSON: %s", err)
+	}
+
+	// Open the file for writing
+	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_TRUNC, 0666)
+	if err != nil {
+		log.Fatalf("failed to open file: %s", err)
+	}
+	defer file.Close()
+
+	// Write the new JSON data to the file
+	_, err = file.Write(newMessagesJSON)
+	if err != nil {
+		log.Fatalf("failed to write to file: %s", err)
+	}
+
+}
